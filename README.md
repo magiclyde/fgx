@@ -1,4 +1,4 @@
-# fgx — 轻量级设计稿交付与解析工作台
+# fgx — 设计稿 → AI 代码的交付工作台
 
 美术上传 PSD → 浏览器端解析 → 结构化 design.json + 切图 → 一键生成 Claude Code 任务包，打通「设计稿 → AI 生成页面」的交付流程。
 
@@ -67,6 +67,5 @@ data/            # 运行期数据（SQLite、文件、任务包），勿提交
 
 ## 常见问题
 
-- **没有 multer？** 后端跑在 Bun + Hono 上，Hono 自带 `parseBody` 处理 multipart 上传，就是现成轮子，multer 属于 Express 生态。
 - **PSD 解析失败？** 让美术另存为 RGB 模式、8 位/通道的 .psd（不支持 CMYK / PSB 大型文档格式）。
 - **没有合成预览图？** PSD 保存时需勾选「最大兼容性」，不影响图层解析与切图。
