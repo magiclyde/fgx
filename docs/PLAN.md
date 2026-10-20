@@ -27,6 +27,7 @@
 | PSD 解析 | ag-psd，全部在浏览器完成 | 服务端只存文件；不支持 PSB/CMYK，限 500MB |
 | 文件存储 | MinIO/S3（`S3_ENDPOINT` 配置时）→ 本地磁盘兜底 | Bun 内置 `S3Client`，零依赖；**任务包始终写本地磁盘**（给本机 Claude Code 读） |
 | 项目 ID | `crypto.randomUUID()` | 服务端校验格式，防路径注入 |
+| 任务包策略 | 覆盖式单包 | 一个项目同时只保留一个任务包（`data/packages/<id>/`），每次生成先删旧包再重建。理由：任务包是一次性交付快照，避免垃圾堆积且提示词路径恒定；明确放弃版本化多包（如同时保留 vant/element 两份），需要时再改 packages/<id>/<序号>/ 结构 + DB 记录 |
 
 ## 架构
 
@@ -87,7 +88,10 @@ id 为路径序号，稳定可引用；文本样式从 ag-psd 尽力提取，缺
 3. **详情工作台**（Penpot 式三栏）：左 el-tree 图层树（勾选框用于切图选择）/ 中画布缩放预览 + 选中层矩形高亮 / 右属性面板（坐标、尺寸、文本、字体、颜色）
    - 切图打包：勾选图层 → 重解析 original.psd → PNG zip 下载
    - 下载 design.json
-   - 生成 Claude 任务包：选目标技术栈（vant 移动端 / element-plus PC，仅影响 PROMPT.md 模板）→ 服务端写包 → 复制提示词
+   - 生成 Claude 任务包：选目标技术栈（vant 移动端 / element-plus PC，仅影响 PROMPT.md 模板）→ 服务端写包
+   - 交付给 Claude 的两种形式：
+     a. 同机（Claude Code 与 fgx 服务同机器）：复制提示词（含包绝对路径，运行时按实际部署位置生成）
+     b. 跨机：下载任务包 zip（GET /:id/package.zip，系统 zip 流式打包）→ 在跑 Claude Code 的机器解压，包内全相对路径，令其读「当前目录下的 PROMPT.md」即可
 4. **用户管理**（仅管理员）：建账、禁用/启用、重置密码
 
 ## 安全要点（内网级）
