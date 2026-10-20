@@ -41,16 +41,27 @@ const toDto = (row) => ({
   createdAt: row.created_at,
 })
 
-// 项目列表（团队共享，所有登录用户可见）
+// 项目列表：管理员看全部，普通用户只看自己上传的
 projectRoutes.get('/', (c) => {
-  const rows = db
-    .query(
-      `SELECT p.*, u.username AS owner_name FROM projects p
-       JOIN users u ON u.id = p.owner_id ORDER BY p.created_at DESC`
-    )
-    .all()
+  const user = c.get('user')
+  const sql = `SELECT p.*, u.username AS owner_name FROM projects p
+       JOIN users u ON u.id = p.owner_id`
+  const rows = user.isAdmin
+    ? db.query(`${sql} ORDER BY p.created_at DESC`).all()
+    : db.query(`${sql} WHERE p.owner_id = ? ORDER BY p.created_at DESC`).all(user.id)
   return c.json(rows.map(toDto))
 })
+
+// 读取项目并校验归属：本人或管理员可访问，否则 null（已写 403/404 响应时用 c.json 返回）
+function getAccessibleProject(c, id) {
+  const row = db
+    .query('SELECT p.*, u.username AS owner_name FROM projects p JOIN users u ON u.id = p.owner_id WHERE p.id = ?')
+    .get(id)
+  if (!row) return { error: c.json({ error: '项目不存在' }, 404) }
+  const user = c.get('user')
+  if (row.owner_id !== user.id && !user.isAdmin) return { error: c.json({ error: '无权访问该项目' }, 403) }
+  return { row }
+}
 
 // 上传：multipart（file=PSD, design=JSON 字符串, composite=PNG blob, name=显示名）
 projectRoutes.post('/upload', async (c) => {
@@ -92,14 +103,12 @@ projectRoutes.post('/upload', async (c) => {
   return c.json(toDto(row), 201)
 })
 
-// 项目详情
+// 项目详情（仅本人或管理员）
 projectRoutes.get('/:id', (c) => {
   const id = c.req.param('id')
   if (!validId(id)) return c.json({ error: 'id 非法' }, 400)
-  const row = db
-    .query('SELECT p.*, u.username AS owner_name FROM projects p JOIN users u ON u.id = p.owner_id WHERE p.id = ?')
-    .get(id)
-  if (!row) return c.json({ error: '项目不存在' }, 404)
+  const { row, error } = getAccessibleProject(c, id)
+  if (error) return error
   return c.json(toDto(row))
 })
 
@@ -114,18 +123,24 @@ async function serveStored(c, key, contentType, downloadName) {
 projectRoutes.get('/:id/design.json', (c) => {
   const id = c.req.param('id')
   if (!validId(id)) return c.json({ error: 'id 非法' }, 400)
+  const { error } = getAccessibleProject(c, id)
+  if (error) return error
   return serveStored(c, projectKey(id, 'design.json'), 'application/json; charset=utf-8')
 })
 
 projectRoutes.get('/:id/original', (c) => {
   const id = c.req.param('id')
   if (!validId(id)) return c.json({ error: 'id 非法' }, 400)
+  const { error } = getAccessibleProject(c, id)
+  if (error) return error
   return serveStored(c, projectKey(id, 'original.psd'), 'application/octet-stream')
 })
 
 projectRoutes.get('/:id/composite', (c) => {
   const id = c.req.param('id')
   if (!validId(id)) return c.json({ error: 'id 非法' }, 400)
+  const { error } = getAccessibleProject(c, id)
+  if (error) return error
   return serveStored(c, projectKey(id, 'composite.png'), 'image/png')
 })
 
@@ -191,8 +206,8 @@ ${assetList}
 projectRoutes.post('/:id/package', async (c) => {
   const id = c.req.param('id')
   if (!validId(id)) return c.json({ error: 'id 非法' }, 400)
-  const row = db.query('SELECT * FROM projects WHERE id = ?').get(id)
-  if (!row) return c.json({ error: '项目不存在' }, 404)
+  const { row, error } = getAccessibleProject(c, id)
+  if (error) return error
 
   const body = await c.req.parseBody({ all: true })
   const target = body.target === 'element' ? 'element' : 'vant'
@@ -247,8 +262,8 @@ projectRoutes.post('/:id/package', async (c) => {
 projectRoutes.get('/:id/package.zip', (c) => {
   const id = c.req.param('id')
   if (!validId(id)) return c.json({ error: 'id 非法' }, 400)
-  const row = db.query('SELECT * FROM projects WHERE id = ?').get(id)
-  if (!row) return c.json({ error: '项目不存在' }, 404)
+  const { row, error } = getAccessibleProject(c, id)
+  if (error) return error
   const dir = join(PACKAGES_DIR, id)
   if (!existsSync(join(dir, 'PROMPT.md'))) return c.json({ error: '任务包不存在，请先生成' }, 404)
 
@@ -266,6 +281,8 @@ projectRoutes.get('/:id/package.zip', (c) => {
 projectRoutes.get('/:id/package', (c) => {
   const id = c.req.param('id')
   if (!validId(id)) return c.json({ error: 'id 非法' }, 400)
+  const { error } = getAccessibleProject(c, id)
+  if (error) return error
   const dir = join(PACKAGES_DIR, id)
   if (!existsSync(join(dir, 'PROMPT.md'))) return c.json({ exists: false })
   const assets = existsSync(join(dir, 'assets')) ? readdirSync(join(dir, 'assets')) : []
