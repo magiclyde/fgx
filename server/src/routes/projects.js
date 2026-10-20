@@ -243,6 +243,25 @@ projectRoutes.post('/:id/package', async (c) => {
   return c.json({ path: dir, prompt })
 })
 
+// 任务包 zip 下载（跨机器场景：在跑 Claude Code 的机器上解压即用，包内均为相对路径）
+projectRoutes.get('/:id/package.zip', (c) => {
+  const id = c.req.param('id')
+  if (!validId(id)) return c.json({ error: 'id 非法' }, 400)
+  const row = db.query('SELECT * FROM projects WHERE id = ?').get(id)
+  if (!row) return c.json({ error: '项目不存在' }, 404)
+  const dir = join(PACKAGES_DIR, id)
+  if (!existsSync(join(dir, 'PROMPT.md'))) return c.json({ error: '任务包不存在，请先生成' }, 404)
+
+  const proc = Bun.spawn(['zip', '-r', '-q', '-', '.'], { cwd: dir, stdout: 'pipe' })
+  const filename = `${row.name.replace(/[\\/:*?"<>|\s]+/g, '_')}-package.zip`
+  return new Response(proc.stdout, {
+    headers: {
+      'Content-Type': 'application/zip',
+      'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`,
+    },
+  })
+})
+
 // 任务包信息
 projectRoutes.get('/:id/package', (c) => {
   const id = c.req.param('id')

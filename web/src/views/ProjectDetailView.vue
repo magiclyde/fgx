@@ -112,7 +112,13 @@
           <p>任务包已生成：</p>
           <p class="pkg-path">{{ packageResult.path }}</p>
         </el-alert>
-        <el-input v-model="packageResult.prompt" type="textarea" :rows="3" readonly class="pkg-prompt" />
+        <div class="pkg-usage">
+          <p><b>Claude Code 跑在本机</b>（与 fgx 服务同一台机器）：点「复制提示词」直接发给它。</p>
+          <p>
+            <b>Claude Code 跑在其他机器</b>：点「下载任务包 zip」，在那台机器上解压，
+            然后对 Claude Code 说「请阅读当前目录下的 PROMPT.md 并按照其中的要求还原设计稿」。
+          </p>
+        </div>
       </template>
       <template #footer>
         <template v-if="!packageResult">
@@ -121,6 +127,7 @@
         </template>
         <template v-else>
           <el-button @click="packageVisible = false">关闭</el-button>
+          <el-button :href="packageZipUrl" tag="a" download>下载任务包 zip</el-button>
           <el-button type="primary" @click="copyPrompt">复制提示词</el-button>
         </template>
       </template>
@@ -156,6 +163,7 @@ const packageVisible = ref(false)
 const packageTarget = ref('vant')
 const packaging = ref(false)
 const packageResult = ref(null)
+const packageZipUrl = computed(() => projectService.packageZipUrl(id))
 
 // 懒加载的 PSD 重解析结果（切图用）
 let canvases = null
@@ -415,7 +423,13 @@ onMounted(async () => {
   font-family: monospace;
   word-break: break-all;
 }
-.pkg-prompt {
-  margin-top: 8px;
+.pkg-usage {
+  margin-top: 12px;
+  font-size: 13px;
+  color: #606266;
+  line-height: 1.7;
+}
+.pkg-usage p {
+  margin: 4px 0;
 }
 </style>

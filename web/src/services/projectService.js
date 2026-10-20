@@ -18,4 +18,5 @@ export const projectService = {
 
   compositeUrl: (id) => `/api/projects/${id}/composite`,
   designUrl: (id) => `/api/projects/${id}/design.json`,
+  packageZipUrl: (id) => `/api/projects/${id}/package.zip`,
 }
