@@ -7,7 +7,7 @@
 - 解析：ag-psd（全部在浏览器完成，服务端只存文件）
 - 存储：默认本地磁盘 `data/files/`；配置 S3 环境变量后走 MinIO/S3
 
-详细设计见 [docs/PLAN.md](docs/PLAN.md)；前端新手入门（面向后端开发的 Vue3 速成）见 [docs/FRONTEND.md](docs/FRONTEND.md)。
+详细设计见 [docs/PLAN.md](docs/PLAN.md)；前端新手入门（面向后端开发的 Vue3 速成）见 [docs/FRONTEND.md](docs/FRONTEND.md)；后端速读（Go/Gin 视角对照）见 [docs/BACKEND.md](docs/BACKEND.md)。
 
 ## 快速开始
 
