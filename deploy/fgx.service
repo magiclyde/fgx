@@ -1,0 +1,30 @@
+# fgx 设计稿工作台 — systemd 用户级服务（免 sudo，随用户登录启动）
+#
+# 安装：
+#   mkdir -p ~/.config/systemd/user
+#   cp deploy/fgx.service ~/.config/systemd/user/
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now fgx
+#
+# 开机自启（不登录也运行，需执行一次）：
+#   loginctl enable-linger $USER
+#
+# 常用命令：
+#   systemctl --user status fgx      # 查看状态
+#   journalctl --user -u fgx -f      # 看日志
+#   systemctl --user restart fgx     # 重启（改了代码/重新 build 后）
+
+[Unit]
+Description=fgx design handoff dashboard (Bun + Hono)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/mnt/workspace/self/code/fgx
+# Bun 会自动加载 WorkingDirectory 下的 .env（PORT / S3_* 等配置放那里）
+ExecStart=/home/clyde/.bun/bin/bun server/src/index.js
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target

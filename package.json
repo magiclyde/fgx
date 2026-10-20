@@ -1,0 +1,15 @@
+{
+  "name": "fgx",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "server",
+    "web"
+  ],
+  "scripts": {
+    "dev": "bun scripts/dev.mjs",
+    "build": "bun run --cwd web build",
+    "start": "bun server/src/index.js",
+    "create-admin": "bun server/scripts/create-admin.js"
+  }
+}
